@@ -114,7 +114,7 @@ const CandidateArea = GObject.registerClass({
         }
     }
 
-    setCandidates(indexes, candidates, cursorPosition, cursorVisible) {
+    setCandidates(indexes, candidates, cursorPosition, cursorVisible, candidateAttrs) {
         for (let i = 0; i < MAX_CANDIDATES_PER_PAGE; ++i) {
             let visible = i < candidates.length;
             let box = this._candidateBoxes[i];
@@ -125,6 +125,10 @@ const CandidateArea = GObject.registerClass({
 
             box._indexLabel.text = indexes && indexes[i] ? indexes[i] : DEFAULT_INDEX_LABELS[i];
             box._candidateLabel.text = candidates[i];
+
+            if (candidateAttrs && candidateAttrs[i]) {
+                this._setTextAttributes(box._candidateLabel.clutter_text, candidateAttrs[i]);
+            }
         }
 
         this._candidateBoxes[this._cursorPosition].remove_style_pseudo_class('selected');
@@ -287,10 +291,13 @@ class IbusCandidatePopup extends BoxPointer.BoxPointer {
             Main.keyboard.setSuggestionsVisible(visible);
 
             let candidates = [];
+            let candidateAttrs = [];
             for (let i = startIndex; i < endIndex; ++i) {
-                candidates.push(lookupTable.get_candidate(i).get_text());
+                let candidate = lookupTable.get_candidate(i);
+                candidates.push(candidate.get_text());
+                candidateAttrs.push(candidate.get_attributes());
 
-                Main.keyboard.addSuggestion(lookupTable.get_candidate(i).get_text(), () => {
+                Main.keyboard.addSuggestion(candidate.get_text(), () => {
                     let index = i;
                     this._panelService.candidate_clicked(index, 1, 0);
                 });
@@ -299,7 +306,8 @@ class IbusCandidatePopup extends BoxPointer.BoxPointer {
             this._candidateArea.setCandidates(indexes,
                 candidates,
                 cursorPos % pageSize,
-                lookupTable.is_cursor_visible());
+                lookupTable.is_cursor_visible(),
+                candidateAttrs);
             this._candidateArea.setOrientation(lookupTable.get_orientation());
             this._candidateArea.updateButtons(lookupTable.is_round(), page, nPages);
         });
@@ -350,8 +358,10 @@ class IbusCandidatePopup extends BoxPointer.BoxPointer {
     _setTextAttributes(clutterText, ibusAttrList) {
         let attr;
         for (let i = 0; (attr = ibusAttrList.get(i)); ++i) {
-            if (attr.get_attr_type() === IBus.AttrType.BACKGROUND)
-                clutterText.set_selection(attr.get_start_index(), attr.get_end_index());
+            // if (attr.get_attr_type() === IBus.AttrType.BACKGROUND)
+            clutterText.set_selection(attr.get_start_index(), attr.get_end_index());
+            // else if (attr.get_attr_type() === IBus.AttrType.FOREGROUND)
+            //     clutterText.set_selection(attr.get_start_index(), attr.get_end_index());
         }
     }
 });
