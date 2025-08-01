@@ -42,8 +42,10 @@ const CandidateArea = GObject.registerClass({
             });
             box._indexLabel = new St.Label({style_class: 'candidate-index'});
             box._candidateLabel = new St.Label({style_class: 'candidate-label'});
+            box._commentLabel = new St.Label({style_class: 'candidate-comment'});
             box.add_child(box._indexLabel);
             box.add_child(box._candidateLabel);
+            box.add_child(box._commentLabel);
             this._candidateBoxes.push(box);
             this.add_child(box);
 
@@ -124,7 +126,27 @@ const CandidateArea = GObject.registerClass({
                 continue;
 
             box._indexLabel.text = indexes && indexes[i] ? indexes[i] : DEFAULT_INDEX_LABELS[i];
-            box._candidateLabel.text = candidates[i];
+
+            const candidate = candidates[i];
+            const candidateText = candidate.get_text();
+
+            let commentStart = candidateText.length;
+            const attrs = candidate.get_attributes();
+            if (attrs) {
+                for (let j = 0; ; j++) {
+                    const attr = attrs.get(j);
+                    if (!attr)
+                        break;
+                    if (attr.get_attr_type() === IBus.AttrType.FOREGROUND)
+                        commentStart = attr.get_start_index();
+                }
+            }
+
+            box._candidateLabel.text = candidateText.substring(0, commentStart);
+
+            box._commentLabel.text = '';
+            if (commentStart < candidateText.length)
+                box._commentLabel.text = candidateText.substring(commentStart);
         }
 
         this._candidateBoxes[this._cursorPosition].remove_style_pseudo_class('selected');
@@ -169,7 +191,7 @@ class IbusCandidatePopup extends BoxPointer.BoxPointer {
         box.add_child(this._preeditText);
 
         this._auxText = new St.Label({
-            style_class: 'candidate-popup-text',
+            style_class: 'candidate-popup-text candidate-popup-aux-text',
             visible: false,
         });
         box.add_child(this._auxText);
@@ -288,9 +310,10 @@ class IbusCandidatePopup extends BoxPointer.BoxPointer {
 
             let candidates = [];
             for (let i = startIndex; i < endIndex; ++i) {
-                candidates.push(lookupTable.get_candidate(i).get_text());
+                const candidate = lookupTable.get_candidate(i)
+                candidates.push(candidate);
 
-                Main.keyboard.addSuggestion(lookupTable.get_candidate(i).get_text(), () => {
+                Main.keyboard.addSuggestion(candidate.get_text(), () => {
                     let index = i;
                     this._panelService.candidate_clicked(index, 1, 0);
                 });

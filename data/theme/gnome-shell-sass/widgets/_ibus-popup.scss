@@ -14,7 +14,13 @@
 .candidate-index {
   padding: 0;
   padding-right: $base_padding;
-  color: $insensitive_fg_color;
+  color: transparentize($fg_color, 0.5);
+}
+
+.candidate-comment {
+  padding: 0;
+  padding-left: 0;
+  color: transparentize($fg_color, 0.5);
 }
 
 .candidate-box {
